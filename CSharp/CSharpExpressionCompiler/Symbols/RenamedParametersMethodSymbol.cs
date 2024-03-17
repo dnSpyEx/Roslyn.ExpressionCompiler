@@ -74,5 +74,7 @@ namespace Microsoft.CodeAnalysis.CSharp.ExpressionEvaluator
             thisParameter = _thisParameter;
             return true;
         }
+
+        internal sealed override bool HasAsyncMethodBuilderAttribute(out TypeSymbol builderArgument) => _originalMethod.HasAsyncMethodBuilderAttribute(out builderArgument);
     }
 }
