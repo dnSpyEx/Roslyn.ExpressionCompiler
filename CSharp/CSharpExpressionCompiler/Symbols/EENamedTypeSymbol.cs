@@ -23,7 +23,6 @@ namespace Microsoft.CodeAnalysis.CSharp.ExpressionEvaluator
         private readonly NamedTypeSymbol _baseType;
         private readonly string _name;
         private readonly ImmutableArray<TypeParameterSymbol> _typeParameters;
-        private readonly ImmutableArray<MethodSymbol> _methods;
 
         internal EENamedTypeSymbol(
             CompilerKind compiler,
@@ -54,7 +53,7 @@ namespace Microsoft.CodeAnalysis.CSharp.ExpressionEvaluator
             this.SourceTypeParameters = sourceTypeParameters;
             _typeParameters = getTypeParameters(currentFrame.ContainingType, this);
             VerifyTypeParameters(this, _typeParameters);
-            _methods = getMethods(currentFrame, this);
+            Methods = getMethods(currentFrame, this);
         }
 
         internal EENamedTypeSymbol(
@@ -94,16 +93,13 @@ namespace Microsoft.CodeAnalysis.CSharp.ExpressionEvaluator
             this.SubstitutedSourceType = typeMap.SubstituteNamedType(sourceType);
             TypeParameterChecker.Check(this.SubstitutedSourceType, _typeParameters);
 
-            _methods = getMethods(currentFrame, this);
+            Methods = getMethods(currentFrame, this);
         }
 
         protected override NamedTypeSymbol WithTupleDataCore(TupleExtraData newData)
             => throw ExceptionUtilities.Unreachable();
 
-        internal ImmutableArray<MethodSymbol> Methods
-        {
-            get { return _methods; }
-        }
+        internal ImmutableArray<MethodSymbol> Methods { get; }
 
         internal override IEnumerable<FieldSymbol> GetFieldsToEmit()
         {
@@ -112,7 +108,7 @@ namespace Microsoft.CodeAnalysis.CSharp.ExpressionEvaluator
 
         internal override IEnumerable<MethodSymbol> GetMethodsToEmit()
         {
-            return _methods;
+            return Methods;
         }
 
         internal override ImmutableArray<NamedTypeSymbol> GetInterfacesToEmit()
@@ -174,7 +170,7 @@ namespace Microsoft.CodeAnalysis.CSharp.ExpressionEvaluator
 
         public override ImmutableArray<Symbol> GetMembers()
         {
-            return _methods.Cast<MethodSymbol, Symbol>();
+            return Methods.Cast<MethodSymbol, Symbol>();
         }
 
         public override ImmutableArray<Symbol> GetMembers(string name)
