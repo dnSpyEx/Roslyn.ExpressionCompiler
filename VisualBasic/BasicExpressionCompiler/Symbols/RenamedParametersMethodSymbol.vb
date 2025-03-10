@@ -313,5 +313,9 @@ Namespace Microsoft.CodeAnalysis.VisualBasic.ExpressionEvaluator
         Friend Overrides Function CalculateLocalSyntaxOffset(localPosition As Integer, localTree As SyntaxTree) As Integer
             Return _originalMethod.CalculateLocalSyntaxOffset(localPosition, localTree)
         End Function
+
+        Public Overrides Function GetOverloadResolutionPriority() As Integer
+            Return _originalMethod.GetOverloadResolutionPriority()
+        End Function
     End Class
 End Namespace

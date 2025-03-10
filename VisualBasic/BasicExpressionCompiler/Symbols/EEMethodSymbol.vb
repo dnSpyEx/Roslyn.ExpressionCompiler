@@ -429,6 +429,10 @@ Namespace Microsoft.CodeAnalysis.VisualBasic.ExpressionEvaluator
             End Get
         End Property
 
+        Public Overrides Function GetOverloadResolutionPriority() As Integer
+            Return 0
+        End Function
+
         Friend Overrides ReadOnly Property ObsoleteAttributeData As ObsoleteAttributeData
             Get
                 Throw ExceptionUtilities.Unreachable
@@ -613,7 +617,7 @@ Namespace Microsoft.CodeAnalysis.VisualBasic.ExpressionEvaluator
             End Select
         End Function
 
-        Friend Overrides Sub AddSynthesizedReturnTypeAttributes(ByRef attributes As ArrayBuilder(Of SynthesizedAttributeData))
+        Friend Overrides Sub AddSynthesizedReturnTypeAttributes(ByRef attributes As ArrayBuilder(Of VisualBasicAttributeData))
             MyBase.AddSynthesizedReturnTypeAttributes(attributes)
 
             Dim returnType = Me.ReturnType
