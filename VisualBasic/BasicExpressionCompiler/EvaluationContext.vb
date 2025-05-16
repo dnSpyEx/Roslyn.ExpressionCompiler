@@ -103,7 +103,7 @@ Namespace Microsoft.CodeAnalysis.VisualBasic.ExpressionEvaluator
         ''' Create a context for evaluating expressions at a type scope.
         ''' </summary>
         ''' <param name="compilation">Compilation.</param>
-        ''' <param name="moduleVersionId">Module containing type.</param>
+        ''' <param name="moduleId">Module containing type.</param>
         ''' <param name="typeToken">Type metadata token.</param>
         ''' <returns>Evaluation context.</returns>
         ''' <remarks>
@@ -111,12 +111,12 @@ Namespace Microsoft.CodeAnalysis.VisualBasic.ExpressionEvaluator
         ''' </remarks>
         Friend Shared Function CreateTypeContext(
             compilation As VisualBasicCompilation,
-            moduleVersionId As Guid,
+            moduleId As ModuleId,
             typeToken As Integer) As EvaluationContext
 
             Debug.Assert(MetadataTokens.Handle(typeToken).Kind = HandleKind.TypeDefinition)
 
-            Dim currentType = compilation.GetType(moduleVersionId, typeToken)
+            Dim currentType = compilation.GetType(moduleId, typeToken)
             Debug.Assert(currentType IsNot Nothing)
 
             Dim currentFrame = New SynthesizedContextMethodSymbol(currentType)
@@ -136,7 +136,7 @@ Namespace Microsoft.CodeAnalysis.VisualBasic.ExpressionEvaluator
         ''' <param name="previous">Previous context, if any, for possible re-use.</param>
         ''' <param name="metadataBlocks">Module metadata.</param>
         ''' <param name="getMethodDebugInfo"></param>
-        ''' <param name="moduleVersionId">Module containing method.</param>
+        ''' <param name="moduleId">Module containing method.</param>
         ''' <param name="methodToken">Method metadata token.</param>
         ''' <param name="methodVersion">Method version.</param>
         ''' <param name="ilOffset">IL offset of instruction pointer in method.</param>
@@ -147,7 +147,7 @@ Namespace Microsoft.CodeAnalysis.VisualBasic.ExpressionEvaluator
             metadataBlocks As ImmutableArray(Of MetadataBlock),
             lazyAssemblyReaders As Lazy(Of ImmutableArray(Of AssemblyReaders)),
             getMethodDebugInfo As GetMethodDebugInfo,
-            moduleVersionId As Guid,
+            moduleId As ModuleId,
             methodToken As Integer,
             methodVersion As Integer,
             ilOffset As UInteger,
@@ -161,7 +161,7 @@ Namespace Microsoft.CodeAnalysis.VisualBasic.ExpressionEvaluator
                 compilation,
                 lazyAssemblyReaders,
                 getMethodDebugInfo,
-                moduleVersionId,
+                moduleId,
                 methodToken,
                 methodVersion,
                 offset,
@@ -172,7 +172,7 @@ Namespace Microsoft.CodeAnalysis.VisualBasic.ExpressionEvaluator
         ''' Create a context for evaluating expressions within a method scope.
         ''' </summary>
         ''' <param name="compilation">Compilation.</param>
-        ''' <param name="moduleVersionId">Module containing method.</param>
+        ''' <param name="moduleId">Module containing method.</param>
         ''' <param name="methodToken">Method metadata token.</param>
         ''' <param name="methodVersion">Method version.</param>
         ''' <param name="ilOffset">IL offset of instruction pointer in method.</param>
@@ -182,7 +182,7 @@ Namespace Microsoft.CodeAnalysis.VisualBasic.ExpressionEvaluator
             compilation As VisualBasicCompilation,
             lazyAssemblyReaders As Lazy(Of ImmutableArray(Of AssemblyReaders)),
             getMethodDebugInfo As GetMethodDebugInfo,
-            moduleVersionId As Guid,
+            moduleId As ModuleId,
             methodToken As Integer,
             methodVersion As Integer,
             ilOffset As Integer,
@@ -194,7 +194,7 @@ Namespace Microsoft.CodeAnalysis.VisualBasic.ExpressionEvaluator
             End If
             Dim localSignatureHandle = If(localSignatureToken <> 0, CType(MetadataTokens.Handle(localSignatureToken), StandaloneSignatureHandle), Nothing)
 
-            Dim currentFrame = compilation.GetMethod(moduleVersionId, methodHandle)
+            Dim currentFrame = compilation.GetMethod(moduleId, methodHandle)
             Debug.Assert(currentFrame IsNot Nothing)
             Dim symbolProvider = New VisualBasicEESymbolProvider(DirectCast(currentFrame.ContainingModule, PEModuleSymbol), currentFrame)
 
@@ -212,7 +212,7 @@ Namespace Microsoft.CodeAnalysis.VisualBasic.ExpressionEvaluator
 #If 0 Then
             End If
 #End If
-            Dim currentSourceMethod = compilation.GetSourceMethod(debugInfo.Compiler, moduleVersionId, methodHandle)
+            Dim currentSourceMethod = compilation.GetSourceMethod(debugInfo.Compiler, moduleId, methodHandle)
 
             Dim reuseSpan = debugInfo.ReuseSpan
 
@@ -233,7 +233,7 @@ Namespace Microsoft.CodeAnalysis.VisualBasic.ExpressionEvaluator
             localsBuilder.AddRange(debugInfo.LocalConstants)
 
             Return New EvaluationContext(
-                New MethodContextReuseConstraints(moduleVersionId, methodToken, methodVersion, reuseSpan),
+                New MethodContextReuseConstraints(moduleId, methodToken, methodVersion, reuseSpan),
                 compilation,
                 currentFrame,
                 currentSourceMethod,

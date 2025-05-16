@@ -114,20 +114,21 @@ namespace Microsoft.CodeAnalysis.CSharp.ExpressionEvaluator
         /// Create a context for evaluating expressions at a type scope.
         /// </summary>
         /// <param name="compilation">Compilation.</param>
-        /// <param name="moduleVersionId">Module containing type</param>
+        /// <param name="moduleId">Module containing type</param>
         /// <param name="typeToken">Type metadata token</param>
         /// <returns>Evaluation context</returns>
         /// <remarks>
         /// No locals since locals are associated with methods, not types.
         /// </remarks>
+        /// <exception cref="BadMetadataModuleException">Module wasn't included in the compilation due to bad metadata.</exception>
         internal static EvaluationContext CreateTypeContext(
             CSharpCompilation compilation,
-            Guid moduleVersionId,
+            ModuleId moduleId,
             int typeToken)
         {
             Debug.Assert(MetadataTokens.Handle(typeToken).Kind == HandleKind.TypeDefinition);
 
-            var currentType = compilation.GetType(moduleVersionId, typeToken);
+            var currentType = compilation.GetType(moduleId, typeToken);
             RoslynDebug.Assert(currentType is object);
             var currentFrame = new SynthesizedContextMethodSymbol(currentType);
             return new EvaluationContext(
@@ -140,12 +141,23 @@ namespace Microsoft.CodeAnalysis.CSharp.ExpressionEvaluator
                 methodDebugInfo: MethodDebugInfo<TypeSymbol, LocalSymbol>.None);
         }
 
+        // Used by VS debugger (/src/debugger/ProductionDebug/CodeAnalysis/CodeAnalysis/ExpressionEvaluator.cs)
+        internal static EvaluationContext CreateMethodContext(
+            ImmutableArray<MetadataBlock> metadataBlocks,
+            GetMethodDebugInfo getMethodDebugInfo,
+            Guid moduleId,
+            int methodToken,
+            int methodVersion,
+            uint ilOffset,
+            int localSignatureToken)
+            => CreateMethodContext(metadataBlocks, getMethodDebugInfo, new ModuleId(moduleId, "<unknown>"), methodToken, methodVersion, ilOffset, localSignatureToken);
+
         /// <summary>
         /// Create a context for evaluating expressions within a method scope.
         /// </summary>
         /// <param name="metadataBlocks">Module metadata</param>
         /// <param name="getMethodDebugInfo"></param>
-        /// <param name="moduleVersionId">Module containing method</param>
+        /// <param name="moduleId">Module containing method</param>
         /// <param name="methodToken">Method metadata token</param>
         /// <param name="methodVersion">Method version.</param>
         /// <param name="ilOffset">IL offset of instruction pointer in method</param>
@@ -154,7 +166,7 @@ namespace Microsoft.CodeAnalysis.CSharp.ExpressionEvaluator
         internal static EvaluationContext CreateMethodContext(
             ImmutableArray<MetadataBlock> metadataBlocks,
             GetMethodDebugInfo getMethodDebugInfo,
-            Guid moduleVersionId,
+            ModuleId moduleId,
             int methodToken,
             int methodVersion,
             uint ilOffset,
@@ -162,12 +174,12 @@ namespace Microsoft.CodeAnalysis.CSharp.ExpressionEvaluator
         {
             var offset = NormalizeILOffset(ilOffset);
 
-            var compilation = metadataBlocks.ToCompilation(moduleVersionId: default, MakeAssemblyReferencesKind.AllAssemblies);
+            var compilation = metadataBlocks.ToCompilation(moduleId: default, MakeAssemblyReferencesKind.AllAssemblies);
 
             return CreateMethodContext(
                 compilation,
                 getMethodDebugInfo,
-                moduleVersionId,
+                moduleId,
                 methodToken,
                 methodVersion,
                 offset,
@@ -178,8 +190,8 @@ namespace Microsoft.CodeAnalysis.CSharp.ExpressionEvaluator
         /// Create a context for evaluating expressions within a method scope.
         /// </summary>
         /// <param name="compilation">Compilation.</param>
-        /// <param name="symReader"><see cref="ISymUnmanagedReader"/> for PDB associated with <paramref name="moduleVersionId"/></param>
-        /// <param name="moduleVersionId">Module containing method</param>
+        /// <param name="symReader"><see cref="ISymUnmanagedReader"/> for PDB associated with <paramref name="moduleId"/></param>
+        /// <param name="moduleId">Module containing method</param>
         /// <param name="methodToken">Method metadata token</param>
         /// <param name="methodVersion">Method version.</param>
         /// <param name="ilOffset">IL offset of instruction pointer in method</param>
@@ -188,7 +200,7 @@ namespace Microsoft.CodeAnalysis.CSharp.ExpressionEvaluator
         internal static EvaluationContext CreateMethodContext(
             CSharpCompilation compilation,
             GetMethodDebugInfo getMethodDebugInfo,
-            Guid moduleVersionId,
+            ModuleId moduleId,
             int methodToken,
             int methodVersion,
             int ilOffset,
@@ -199,7 +211,7 @@ namespace Microsoft.CodeAnalysis.CSharp.ExpressionEvaluator
                 localSignatureToken = 0;
             var localSignatureHandle = (localSignatureToken != 0) ? (StandaloneSignatureHandle)MetadataTokens.Handle(localSignatureToken) : default(StandaloneSignatureHandle);
 
-            var currentFrame = compilation.GetMethod(moduleVersionId, methodHandle);
+            var currentFrame = compilation.GetMethod(moduleId, methodHandle);
             RoslynDebug.AssertNotNull(currentFrame);
             var symbolProvider = new CSharpEESymbolProvider(compilation.SourceAssembly, (PEModuleSymbol)currentFrame.ContainingModule, currentFrame);
 
@@ -207,7 +219,7 @@ namespace Microsoft.CodeAnalysis.CSharp.ExpressionEvaluator
             var localInfo = metadataDecoder.GetLocalInfo(localSignatureHandle);
 
             var debugInfo = getMethodDebugInfo().ToMethodDebugInfo(symbolProvider);
-            var currentSourceMethod = compilation.GetSourceMethod(debugInfo.Compiler, moduleVersionId, methodHandle);
+            var currentSourceMethod = compilation.GetSourceMethod(debugInfo.Compiler, moduleId, methodHandle);
 
             var reuseSpan = debugInfo.ReuseSpan;
             var localsBuilder = ArrayBuilder<LocalSymbol>.GetInstance();
@@ -224,7 +236,7 @@ namespace Microsoft.CodeAnalysis.CSharp.ExpressionEvaluator
             localsBuilder.AddRange(debugInfo.LocalConstants);
 
             return new EvaluationContext(
-                new MethodContextReuseConstraints(moduleVersionId, methodToken, methodVersion, reuseSpan),
+                new MethodContextReuseConstraints(moduleId, methodToken, methodVersion, reuseSpan),
                 compilation,
                 currentFrame,
                 currentSourceMethod,

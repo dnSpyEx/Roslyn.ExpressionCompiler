@@ -88,7 +88,7 @@ namespace Microsoft.CodeAnalysis.ExpressionEvaluator
                     continue;
                 }
 
-                Debug.Assert(block.ModuleVersionId == module.Mvid);
+                Debug.Assert(block.ModuleId.Id == module.Mvid);
                 builder.Add(block);
                 index++;
             }
@@ -182,9 +182,10 @@ namespace Microsoft.CodeAnalysis.ExpressionEvaluator
             {
                 var reader = new MetadataReader((byte*)ptr, (int)size);
                 var moduleDef = reader.GetModuleDefinition();
-                var moduleVersionId = reader.GetGuid(moduleDef.Mvid);
+                var name = reader.GetString(moduleDef.Name);
+                var mvid = reader.GetGuid(moduleDef.Mvid);
                 var generationId = reader.GetGuid(moduleDef.GenerationId);
-                block = new MetadataBlock(moduleVersionId, generationId, ptr, (int)size);
+                block = new MetadataBlock(new ModuleId(mvid, name), generationId, ptr, (int)size);
                 return true;
             }
             catch (BadImageFormatException)
@@ -225,17 +226,12 @@ namespace Microsoft.CodeAnalysis.ExpressionEvaluator
         */
 
         /*
-        internal static DkmCompiledClrInspectionQuery? ToQueryResult(
-            this CompileResult? compResult,
+        internal static DkmCompiledClrInspectionQuery ToQueryResult(
+            this CompileResult compResult,
             DkmCompilerId languageId,
             ResultProperties resultProperties,
             DkmClrRuntimeInstance runtimeInstance)
         {
-            if (compResult == null)
-            {
-                return null;
-            }
-
             Debug.Assert(compResult.Assembly != null);
 
             ReadOnlyCollection<byte>? customTypeInfo;
