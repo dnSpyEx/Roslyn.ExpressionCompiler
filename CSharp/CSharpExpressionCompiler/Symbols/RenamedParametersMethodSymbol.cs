@@ -67,6 +67,8 @@ namespace Microsoft.CodeAnalysis.CSharp.ExpressionEvaluator
 
         internal override UnmanagedCallersOnlyAttributeData? GetUnmanagedCallersOnlyAttributeData(bool forceComplete) => _originalMethod.GetUnmanagedCallersOnlyAttributeData(forceComplete);
 
+        internal sealed override bool HasSpecialNameAttribute => _originalMethod.HasSpecialNameAttribute;
+
         internal override bool IsNullableAnalysisEnabled() => _originalMethod.IsNullableAnalysisEnabled();
 
         internal override bool TryGetThisParameter(out ParameterSymbol? thisParameter)
@@ -74,6 +76,8 @@ namespace Microsoft.CodeAnalysis.CSharp.ExpressionEvaluator
             thisParameter = _thisParameter;
             return true;
         }
+
+        internal override int TryGetOverloadResolutionPriority() => _originalMethod.TryGetOverloadResolutionPriority();
 
         internal sealed override bool HasAsyncMethodBuilderAttribute(out TypeSymbol builderArgument) => _originalMethod.HasAsyncMethodBuilderAttribute(out builderArgument);
     }

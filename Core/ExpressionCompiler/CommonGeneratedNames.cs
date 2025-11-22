@@ -88,6 +88,8 @@ namespace Microsoft.CodeAnalysis.ExpressionEvaluator
         AsyncIteratorPromiseOfValueOrEndBackingField,
         DisposeModeField,
         CombinedTokensField,
+        InlineArrayType,
+        ReadOnlyListType,
 
         // mcs
         StateMachineDisposingField,
@@ -732,6 +734,8 @@ namespace Microsoft.CodeAnalysis.ExpressionEvaluator
                             case 'v': kind = CommonGeneratedNameKind.AsyncIteratorPromiseOfValueOrEndBackingField; break;
                             case 'w': kind = CommonGeneratedNameKind.DisposeModeField; break;
                             case 'x': kind = CommonGeneratedNameKind.CombinedTokensField; break;
+                            case 'y': kind = CommonGeneratedNameKind.InlineArrayType; break;
+                            case 'z': kind = CommonGeneratedNameKind.ReadOnlyListType; break;
                             default: kind = CommonGeneratedNameKind.None; break;
                             }
                             return kind != CommonGeneratedNameKind.None;

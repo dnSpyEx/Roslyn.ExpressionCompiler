@@ -61,6 +61,8 @@ namespace Microsoft.CodeAnalysis.CSharp.ExpressionEvaluator
             case CommonGeneratedNameKind.AsyncIteratorPromiseOfValueOrEndBackingField: return GeneratedNameKind.AsyncIteratorPromiseOfValueOrEndBackingField;
             case CommonGeneratedNameKind.DisposeModeField: return GeneratedNameKind.DisposeModeField;
             case CommonGeneratedNameKind.CombinedTokensField: return GeneratedNameKind.CombinedTokensField;
+            case CommonGeneratedNameKind.InlineArrayType: return GeneratedNameKind.InlineArrayType;
+            case CommonGeneratedNameKind.ReadOnlyListType: return GeneratedNameKind.ReadOnlyListType;
             default:
                 Debug.Fail($"Unknown kind: {kind}");
                 return hiddenKind;
@@ -108,6 +110,8 @@ namespace Microsoft.CodeAnalysis.CSharp.ExpressionEvaluator
             case GeneratedNameKind.AsyncIteratorPromiseOfValueOrEndBackingField: return CommonGeneratedNameKind.AsyncIteratorPromiseOfValueOrEndBackingField;
             case GeneratedNameKind.DisposeModeField: return CommonGeneratedNameKind.DisposeModeField;
             case GeneratedNameKind.CombinedTokensField: return CommonGeneratedNameKind.CombinedTokensField;
+            case GeneratedNameKind.InlineArrayType: return CommonGeneratedNameKind.InlineArrayType;
+            case GeneratedNameKind.ReadOnlyListType: return CommonGeneratedNameKind.ReadOnlyListType;
             default:
                 Debug.Fail($"Unknown kind: {kind}");
                 return CommonGeneratedNameKind.None;

@@ -7,6 +7,7 @@ Imports System.Runtime.InteropServices
 Imports System.Threading
 Imports Microsoft.Cci
 Imports Microsoft.CodeAnalysis.ExpressionEvaluator
+Imports Microsoft.CodeAnalysis.Collections
 Imports Microsoft.CodeAnalysis.VisualBasic.Symbols
 Imports Roslyn.Utilities
 
@@ -77,8 +78,8 @@ Namespace Microsoft.CodeAnalysis.VisualBasic.ExpressionEvaluator
             ' (since the old ones have the wrong owners).  Unfortunately, we have a circular dependency:
             '   1) Each new type parameter requires the entire map in order to be able to construct its constraint list.
             '   2) The map cannot be constructed until all new type parameters exist.
-            ' Our solution is to pass each new type parameter a lazy reference to the type map.  We then 
-            ' initialize the map as soon as the new type parameters are available - and before they are 
+            ' Our solution is to pass each new type parameter a lazy reference to the type map.  We then
+            ' initialize the map as soon as the new type parameters are available - and before they are
             ' handed out - so that there is never a period where they can require the type map and find
             ' it uninitialized.
 

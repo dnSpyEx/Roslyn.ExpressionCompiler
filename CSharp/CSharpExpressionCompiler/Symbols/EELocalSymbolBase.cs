@@ -4,7 +4,6 @@
 
 #nullable disable
 
-using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
@@ -85,7 +84,7 @@ namespace Microsoft.CodeAnalysis.CSharp.ExpressionEvaluator
             UseSiteInfo<AssemblySymbol> result = default;
             if (!DeriveUseSiteInfoFromType(ref result, type, AllowedRequiredModifierType.None) && this.ContainingModule.HasUnifiedReferences)
             {
-                // If the member is in an assembly with unified references, 
+                // If the member is in an assembly with unified references,
                 // we check if its definition depends on a type from a unified reference.
                 HashSet<TypeSymbol> unificationCheckedTypes = null;
                 var diagnosticInfo = result.DiagnosticInfo;
