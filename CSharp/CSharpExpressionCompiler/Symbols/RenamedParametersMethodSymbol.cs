@@ -3,6 +3,7 @@
 
 using System.Collections.Immutable;
 using System.Diagnostics;
+using Microsoft.CodeAnalysis.CSharp.Emit;
 using Microsoft.CodeAnalysis.CSharp.Symbols;
 using Microsoft.CodeAnalysis.ExpressionEvaluator;
 using Microsoft.CodeAnalysis.PooledObjects;
@@ -21,7 +22,7 @@ namespace Microsoft.CodeAnalysis.CSharp.ExpressionEvaluator
             var builder = ArrayBuilder<ParameterSymbol>.GetInstance();
 
             var thisParameter = originalMethod.ThisParameter;
-            var hasThisParameter = (object)thisParameter != null;
+            var hasThisParameter = (object?)thisParameter != null;
             if (hasThisParameter)
             {
                 _thisParameter = MakeParameterSymbol(-1, GeneratedNames.ThisProxyFieldName(), thisParameter!);
@@ -80,5 +81,8 @@ namespace Microsoft.CodeAnalysis.CSharp.ExpressionEvaluator
         internal override int TryGetOverloadResolutionPriority() => _originalMethod.TryGetOverloadResolutionPriority();
 
         internal sealed override bool HasAsyncMethodBuilderAttribute(out TypeSymbol builderArgument) => _originalMethod.HasAsyncMethodBuilderAttribute(out builderArgument);
+
+        internal sealed override void AddSynthesizedAttributes(PEModuleBuilder moduleBuilder, ref ArrayBuilder<CSharpAttributeData> attributes)
+            => _originalMethod.AddSynthesizedAttributes(moduleBuilder, ref attributes);
     }
 }

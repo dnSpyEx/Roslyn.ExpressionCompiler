@@ -129,6 +129,17 @@ namespace Microsoft.CodeAnalysis.CSharp.ExpressionEvaluator
                 _displayClassVariables.Values.Any(v => v.Kind == DisplayClassVariableKind.This));
         }
 
+        internal bool IsInFieldKeywordContext(CompilerKind compiler)
+        {
+            if (_currentFrame is not PEMethodSymbol)
+            {
+                return false;
+            }
+
+            return (TryFindUserDefinedMethod(_currentFrame, compiler, out _) ?? _currentFrame).OriginalDefinition.AssociatedSymbol is PEPropertySymbol property &&
+                   Binder.IsPropertyWithBackingField(property, out _);
+        }
+
         internal bool TryCompileExpressions(
             ImmutableArray<CSharpSyntaxNode> syntaxNodes,
             string typeNameBase,
@@ -219,13 +230,11 @@ namespace Microsoft.CodeAnalysis.CSharp.ExpressionEvaluator
                 this,
                 (EEMethodSymbol method, DiagnosticBag diags, out ImmutableArray<LocalSymbol> declaredLocals, out ResultProperties properties) =>
                 {
-                    var hasDisplayClassThis = GetThisProxy(_displayClassVariables) != null;
                     var binder = ExtendBinderChain(
                         syntax,
                         aliases,
                         method,
                         NamespaceBinder,
-                        hasDisplayClassThis,
                         _methodNotType,
                         _methodDebugInfo.Compiler,
                         out declaredLocals);
@@ -260,13 +269,11 @@ namespace Microsoft.CodeAnalysis.CSharp.ExpressionEvaluator
                 this,
                 (EEMethodSymbol method, DiagnosticBag diags, out ImmutableArray<LocalSymbol> declaredLocals, out ResultProperties properties) =>
                 {
-                    var hasDisplayClassThis = GetThisProxy(_displayClassVariables) != null;
                     var binder = ExtendBinderChain(
                         syntax,
                         aliases,
                         method,
                         NamespaceBinder,
-                        hasDisplayClassThis,
                         methodNotType: true,
                         compiler: _methodDebugInfo.Compiler,
                         declaredLocals: out declaredLocals);
@@ -971,17 +978,16 @@ namespace Microsoft.CodeAnalysis.CSharp.ExpressionEvaluator
             return -1;
         }
 
-        private static Binder ExtendBinderChain(
+        private Binder ExtendBinderChain(
             CSharpSyntaxNode syntax,
             ImmutableArray<Alias> aliases,
             EEMethodSymbol method,
             Binder binder,
-            bool hasDisplayClassThis,
             bool methodNotType,
             CompilerKind compiler,
             out ImmutableArray<LocalSymbol> declaredLocals)
         {
-            var substitutedSourceMethod = GetSubstitutedSourceMethod(method.SubstitutedSourceMethod, compiler, hasDisplayClassThis);
+            var substitutedSourceMethod = GetSubstitutedUserDefinedSourceMethod(method.SubstitutedSourceMethod, compiler);
             var substitutedSourceType = substitutedSourceMethod.ContainingType;
 
             var stack = ArrayBuilder<NamedTypeSymbol>.GetInstance();
@@ -1839,7 +1845,7 @@ REPARSE:
             //    so we may have to walk out more than one level.
             while (IsDisplayClassType(type, compiler))
             {
-                type = type.ContainingType!;
+                type = type.ContainingType;
             }
 
             return type;
@@ -1851,9 +1857,6 @@ REPARSE:
         /// <param name="candidateSubstitutedSourceMethod">
         /// The symbol of the method that is currently on top of the callstack, with
         /// EE type parameters substituted in place of the original type parameters.
-        /// </param>
-        /// <param name="sourceMethodMustBeInstance">
-        /// True if "this" is available via a display class in the current context.
         /// </param>
         /// <returns>
         /// If <paramref name="candidateSubstitutedSourceMethod"/> is compiler-generated,
@@ -1874,12 +1877,30 @@ REPARSE:
         /// properties that are used during binding (e.g. static-ness, generic arity, type parameter
         /// constraints).
         /// </remarks>
-        internal static MethodSymbol GetSubstitutedSourceMethod(
+        internal MethodSymbol GetSubstitutedUserDefinedSourceMethod(
             MethodSymbol candidateSubstitutedSourceMethod,
-            CompilerKind compiler,
-            bool sourceMethodMustBeInstance)
+            CompilerKind compiler)
         {
             Debug.Assert(candidateSubstitutedSourceMethod.DeclaringCompilation is not null);
+
+            MethodSymbol? userDefinedMethod = TryFindUserDefinedMethod(candidateSubstitutedSourceMethod, compiler, out ImmutableArray<TypeWithAnnotations> displayClassTypeArguments);
+
+            if (userDefinedMethod is not null)
+            {
+                MethodSymbol sourceMethod = new EECompilationContextMethod(candidateSubstitutedSourceMethod.DeclaringCompilation!, userDefinedMethod.OriginalDefinition);
+                sourceMethod = sourceMethod.AsMember(userDefinedMethod.ContainingType);
+
+                return displayClassTypeArguments.Length == 0
+                    ? sourceMethod
+                    : sourceMethod.Construct(displayClassTypeArguments);
+            }
+
+            return candidateSubstitutedSourceMethod;
+        }
+
+        private MethodSymbol? TryFindUserDefinedMethod(MethodSymbol candidateSubstitutedSourceMethod, CompilerKind compiler, out ImmutableArray<TypeWithAnnotations> displayClassTypeArguments)
+        {
+            displayClassTypeArguments = default;
 
             var candidateSubstitutedSourceType = candidateSubstitutedSourceMethod.ContainingType;
 
@@ -1888,6 +1909,8 @@ REPARSE:
                 compiler.TryParseSourceMethodNameFromGeneratedName(candidateSubstitutedSourceMethod.Name, GeneratedNameKind.LambdaMethod, out desiredMethodName) ||
                 compiler.TryParseSourceMethodNameFromGeneratedName(candidateSubstitutedSourceMethod.Name, GeneratedNameKind.LocalFunction, out desiredMethodName))
             {
+                bool sourceMethodMustBeInstance = GetThisProxy(_displayClassVariables) != null;
+
                 // We could be in the MoveNext method of an async lambda.
                 string? tempMethodName;
                 if (compiler.TryParseSourceMethodNameFromGeneratedName(desiredMethodName, GeneratedNameKind.LambdaMethod, out tempMethodName) ||
@@ -1913,19 +1936,15 @@ REPARSE:
                 {
                     if (IsViableSourceMethod(candidateMethod, desiredMethodName, desiredTypeParameters, sourceMethodMustBeInstance))
                     {
-                        MethodSymbol sourceMethod = new EECompilationContextMethod(candidateSubstitutedSourceMethod.DeclaringCompilation!, candidateMethod.OriginalDefinition);
-                        sourceMethod = sourceMethod.AsMember(substitutedSourceType);
-
-                        return desiredTypeParameters.Length == 0
-                            ? sourceMethod
-                            : sourceMethod.Construct(candidateSubstitutedSourceType.TypeArgumentsWithAnnotationsNoUseSiteDiagnostics);
+                        displayClassTypeArguments = candidateSubstitutedSourceType.TypeArgumentsWithAnnotationsNoUseSiteDiagnostics;
+                        return candidateMethod;
                     }
                 }
 
                 Debug.Fail("Why didn't we find a substituted source method for " + candidateSubstitutedSourceMethod + "?");
             }
 
-            return candidateSubstitutedSourceMethod;
+            return null;
         }
 
         private static bool IsViableSourceMethod(
