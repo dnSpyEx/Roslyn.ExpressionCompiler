@@ -48,6 +48,11 @@ namespace Microsoft.CodeAnalysis.CSharp.ExpressionEvaluator
 
         public override ImmutableArray<ParameterSymbol> Parameters => _parameters;
 
+        public override bool IsAsync => _originalMethod.IsAsync;
+
+        internal sealed override ThreeState RuntimeAsyncMethodGenerationAttributeSetting =>
+            _originalMethod.RuntimeAsyncMethodGenerationAttributeSetting;
+
         internal override CSharpCompilation DeclaringCompilation => _originalMethod.DeclaringCompilation;
 
         public override TypeWithAnnotations ReturnTypeWithAnnotations => _originalMethod.ReturnTypeWithAnnotations;
