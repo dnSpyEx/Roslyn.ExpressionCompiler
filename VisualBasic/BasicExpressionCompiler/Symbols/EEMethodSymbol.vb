@@ -583,6 +583,7 @@ Namespace Microsoft.CodeAnalysis.VisualBasic.ExpressionEvaluator
                     diagnostics.DiagnosticBag), BoundBlock)
 
                 If diagnostics.HasAnyErrors() Then
+                    localMap.Free()
                     Return newBody
                 End If
 
